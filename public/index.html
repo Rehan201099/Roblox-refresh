@@ -3,63 +3,83 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Roblox Cookie Checker Sederhana</title>
+  <title>Roblox Account Inspector</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background-color: #0f172a;
-      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #0b0f19;
+      color: #e2e8f0;
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
       margin: 0;
+      padding: 20px 0;
     }
     .card {
-      background: #1e293b;
+      background: #151c2c;
       padding: 25px;
-      border-radius: 12px;
+      border-radius: 14px;
       width: 90%;
-      max-width: 400px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      max-width: 440px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      border: 1px solid #1e293b;
     }
-    h2 { text-align: center; margin-top: 0; color: #38bdf8; }
+    h2 { text-align: center; margin-top: 0; color: #38bdf8; font-size: 22px; }
     textarea {
       width: 100%;
-      height: 100px;
-      background: #0f172a;
+      height: 90px;
+      background: #0b0f19;
       border: 1px solid #334155;
-      color: #fff;
+      color: #f8fafc;
       border-radius: 8px;
       padding: 10px;
       box-sizing: border-box;
       resize: vertical;
-      font-size: 12px;
+      font-size: 11px;
     }
     button {
       width: 100%;
       padding: 12px;
-      margin-top: 15px;
-      background: #3b82f6;
+      margin-top: 12px;
+      background: #2563eb;
       border: none;
       color: white;
       font-weight: bold;
       border-radius: 8px;
       cursor: pointer;
+      transition: 0.2s;
     }
-    button:hover { background: #2563eb; }
-    #result { margin-top: 15px; font-size: 14px; word-break: break-word; }
-    .success { color: #4ade80; }
-    .error { color: #f87171; }
+    button:hover { background: #1d4ed8; }
+    #result { margin-top: 18px; font-size: 14px; }
+    
+    .info-box {
+      background: #0b0f19;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 10px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid #1e293b;
+    }
+    .info-row:last-child { border-bottom: none; }
+    
+    .badge-yes { color: #4ade80; font-weight: bold; }
+    .badge-no { color: #f87171; font-weight: bold; }
+    .error { color: #f87171; text-align: center; font-weight: bold; }
   </style>
 </head>
 <body>
 
   <div class="card">
-    <h2>Roblox Checker</h2>
-    <label for="cookieInput">Masukkan Cookie (.ROBLOSECURITY):</label>
+    <h2>Roblox Account Inspector</h2>
+    <label for="cookieInput" style="font-size: 13px; color: #94a3b8;">Masukkan Cookie (.ROBLOSECURITY):</label>
     <textarea id="cookieInput" placeholder="_|WARNING:-DO-NOT-SHARE-THIS..."></textarea>
-    <button onclick="checkCookie()">Cek Cookie</button>
+    <button onclick="checkCookie()">Cek Detail Akun</button>
 
     <div id="result"></div>
   </div>
@@ -76,7 +96,7 @@
       }
 
       resultDiv.className = '';
-      resultDiv.innerHTML = 'Memeriksa...';
+      resultDiv.innerHTML = '<div style="text-align:center; color:#94a3b8;">Memeriksa detail akun...</div>';
 
       try {
         const response = await fetch('/api/check', {
@@ -88,20 +108,39 @@
         const data = await response.json();
 
         if (response.ok && data.success) {
-          resultDiv.className = 'success';
+          const u = data.user;
+          
+          // Format Email
+          let emailStatus = '<span class="badge-no">Tidak Ada</span>';
+          if (u.email.hasEmail) {
+            emailStatus = u.email.isVerified 
+              ? '<span class="badge-yes">Ada (Terverifikasi)</span>' 
+              : '<span class="badge-no">Ada (Belum Verif)</span>';
+          }
+
+          // Format Keamanan
+          let secureStatus = u.security.isSecure 
+            ? `<span class="badge-no">Aktif (${u.security.methods.join(', ')})</span>` 
+            : '<span class="badge-yes">Tidak Aktif (Polos/Aman)</span>';
+
           resultDiv.innerHTML = `
-            <strong>Status: Cookie Valid!</strong><br>
-            Username: ${data.user.name}<br>
-            Display Name: ${data.user.displayName}<br>
-            User ID: ${data.user.id}
+            <div class="info-box">
+              <div class="info-row"><span>Username:</span> <strong>${u.name}</strong></div>
+              <div class="info-row"><span>Display Name:</span> <strong>${u.displayName}</strong></div>
+              <div class="info-row"><span>User ID:</span> <strong>${u.id}</strong></div>
+              <div class="info-row"><span>Status Email:</span> ${emailStatus}</div>
+              <div class="info-row"><span>Pengaman (2FA/Secure):</span> ${secureStatus}</div>
+              <div class="info-row"><span>Umur Terverifikasi (ID):</span> ${u.ageVerified ? '<span class="badge-yes">Ya (ID Verified)</span>' : '<span class="badge-no">Tidak</span>'}</div>
+              <div class="info-row"><span>Roblox Premium:</span> ${u.isPremium ? '<span class="badge-yes">Aktif</span>' : '<span class="badge-no">Tidak</span>'}</div>
+            </div>
           `;
         } else {
           resultDiv.className = 'error';
-          resultDiv.innerHTML = `Error: ${data.error || 'Gagal mengecek cookie'}`;
+          resultDiv.innerHTML = `${data.error || 'Gagal mengecek cookie'}`;
         }
       } catch (err) {
         resultDiv.className = 'error';
-        resultDiv.innerHTML = `Error: Gagal terhubung ke server.`;
+        resultDiv.innerHTML = `Gagal terhubung ke server backend.`;
       }
     }
   </script>
