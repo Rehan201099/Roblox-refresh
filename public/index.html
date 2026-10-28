@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Roblox Account Inspector</title>
+  <title>Roblox Bulk Cookie Checker</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -14,20 +14,21 @@
       align-items: center;
       min-height: 100vh;
       margin: 0;
+      padding: 20px;
     }
     .card {
       background: #151c2c;
       padding: 25px;
       border-radius: 12px;
-      width: 90%;
-      max-width: 400px;
+      width: 100%;
+      max-width: 600px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.5);
       border: 1px solid #1e293b;
     }
     h2 { text-align: center; margin-top: 0; color: #38bdf8; }
     textarea {
       width: 100%;
-      height: 90px;
+      height: 150px;
       background: #0b0f19;
       border: 1px solid #334155;
       color: #fff;
@@ -36,11 +37,16 @@
       box-sizing: border-box;
       resize: vertical;
       font-size: 11px;
+      font-family: monospace;
+    }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
     }
     button {
-      width: 100%;
+      flex: 1;
       padding: 12px;
-      margin-top: 12px;
       background: #2563eb;
       border: none;
       color: white;
@@ -49,96 +55,124 @@
       cursor: pointer;
     }
     button:hover { background: #1d4ed8; }
-    #result { margin-top: 15px; font-size: 14px; }
-    .info-box {
+    button.download-btn {
+      background: #16a34a;
+      display: none;
+    }
+    button.download-btn:hover { background: #15803d; }
+    
+    #summary {
+      margin-top: 15px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .list-box {
+      margin-top: 10px;
+      max-height: 200px;
+      overflow-y: auto;
       background: #0b0f19;
       border: 1px solid #1e293b;
       border-radius: 8px;
-      padding: 12px;
-      line-height: 1.6;
-    }
-    .link-group {
-      margin-top: 10px;
-      display: flex;
-      gap: 8px;
-    }
-    .link-btn {
-      flex: 1;
-      text-align: center;
-      padding: 8px;
-      background: #334155;
-      color: #fff;
-      text-decoration: none;
-      border-radius: 6px;
+      padding: 10px;
       font-size: 12px;
-      font-weight: bold;
+      font-family: monospace;
     }
-    .link-btn:hover { background: #475569; }
-    .badge-yes { color: #4ade80; font-weight: bold; }
-    .badge-no { color: #f87171; font-weight: bold; }
+    .item-valid { color: #4ade80; margin-bottom: 4px; }
+    .item-dead { color: #f87171; margin-bottom: 4px; }
     .error { color: #f87171; text-align: center; font-weight: bold; }
   </style>
 </head>
 <body>
 
   <div class="card">
-    <h2>Roblox Checker</h2>
-    <label for="cookieInput" style="font-size: 12px; color: #94a3b8;">Masukkan Cookie (.ROBLOSECURITY):</label>
-    <textarea id="cookieInput" placeholder="_|WARNING:-DO-NOT-SHARE-THIS..."></textarea>
-    <button onclick="checkCookie()">Cek Akun</button>
+    <h2>Roblox Bulk Cookie Checker</h2>
+    <label for="cookieInput" style="font-size: 12px; color: #94a3b8;">Masukkan Cookie (1 Cookie per baris):</label>
+    <textarea id="cookieInput" placeholder="_|WARNING:-DO-NOT-SHARE-THIS...&#10;_|WARNING:-DO-NOT-SHARE-THIS..."></textarea>
+    
+    <div class="btn-group">
+      <button onclick="checkBulkCookies()">Mulai Cek</button>
+      <button id="dlBtn" class="download-btn" onclick="downloadValidTxt()">📥 Download Valid (.txt)</button>
+    </div>
 
-    <div id="result"></div>
+    <div id="summary"></div>
+    <div id="resultList" class="list-box" style="display: none;"></div>
   </div>
 
   <script>
-    async function checkCookie() {
-      const cookie = document.getElementById('cookieInput').value.trim();
-      const resultDiv = document.getElementById('result');
-      
-      if (!cookie) {
-        resultDiv.className = 'error';
-        resultDiv.innerHTML = 'Masukkan cookie terlebih dahulu!';
+    let validList = [];
+
+    async function checkBulkCookies() {
+      const rawText = document.getElementById('cookieInput').value.trim();
+      const summaryDiv = document.getElementById('summary');
+      const resultListDiv = document.getElementById('resultList');
+      const dlBtn = document.getElementById('dlBtn');
+
+      if (!rawText) {
+        alert('Masukkan minimal satu cookie!');
         return;
       }
 
-      resultDiv.className = '';
-      resultDiv.innerHTML = '<div style="text-align:center; color:#94a3b8;">Memeriksa akun...</div>';
+      // Split input berdasarkan baris baru (newline)
+      const cookiesArray = rawText.split('\n').map(c => c.trim()).filter(c => c.length > 0);
+
+      summaryDiv.innerHTML = '<span style="color:#94a3b8;">Memeriksa ' + cookiesArray.length + ' cookie...</span>';
+      resultListDiv.style.display = 'block';
+      resultListDiv.innerHTML = '';
+      dlBtn.style.display = 'none';
+      validList = [];
 
       try {
-        const response = await fetch('/api/check', {
+        const response = await fetch('/api/check-bulk', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cookie: cookie })
+          body: JSON.stringify({ cookies: cookiesArray })
         });
 
         const data = await response.json();
 
         if (response.ok && data.success) {
-          const u = data.user;
-          resultDiv.innerHTML = `
-            <div class="info-box">
-              <strong>Status: Valid ✅</strong><br>
-              Username: <strong>${u.name}</strong><br>
-              Display Name: <strong>${u.displayName}</strong><br>
-              User ID: <strong>${u.id}</strong><br>
-              Robux: <strong style="color: #4ade80;">${u.robux}</strong><br>
-              Trade Info: <strong>${u.trade}</strong><br>
-              Premium: ${u.isPremium ? '<span class="badge-yes">Ya</span>' : '<span class="badge-no">Tidak</span>'}
-              
-              <div class="link-group">
-                <a href="https://www.roblox.com/users/${u.id}/profile" target="_blank" class="link-btn">🔗 Cek Avatar</a>
-                <a href="https://www.roblox.com/users/${u.id}/inventory" target="_blank" class="link-btn">📦 Cek Inventori</a>
-              </div>
-            </div>
-          `;
+          let validCount = 0;
+          let deadCount = 0;
+
+          data.results.forEach((item, idx) => {
+            if (item.valid) {
+              validCount++;
+              validList.push(item);
+              resultListDiv.innerHTML += `<div class="item-valid">[VALID] ${item.username} (ID: ${item.userId})</div>`;
+            } else {
+              deadCount++;
+              resultListDiv.innerHTML += `<div class="item-dead">[DEAD] Cookie #${idx + 1}</div>`;
+            }
+          });
+
+          summaryDiv.innerHTML = `Hasil: <span style="color:#4ade80;">${validCount} Valid</span> | <span style="color:#f87171;">${deadCount} Dead</span>`;
+
+          if (validCount > 0) {
+            dlBtn.style.display = 'block';
+          }
         } else {
-          resultDiv.className = 'error';
-          resultDiv.innerHTML = `${data.error || 'Gagal mengecek cookie'}`;
+          summaryDiv.innerHTML = `<span class="error">${data.error || 'Gagal mengecek cookie'}</span>`;
         }
       } catch (err) {
-        resultDiv.className = 'error';
-        resultDiv.innerHTML = `Gagal terhubung ke server.`;
+        summaryDiv.innerHTML = `<span class="error">Gagal terhubung ke server.</span>`;
       }
+    }
+
+    function downloadValidTxt() {
+      if (validList.length === 0) return;
+
+      // Format teks: Username:UserID:Cookie
+      let textContent = validList.map(item => `${item.username}:${item.userId}:${item.cookie}`).join('\n');
+
+      const blob = new Blob([textContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `valid_cookies_${Date.now()}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
   </script>
 </body>
