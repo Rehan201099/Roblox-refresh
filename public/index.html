@@ -28,7 +28,7 @@
     h2 { text-align: center; margin-top: 0; color: #38bdf8; }
     textarea {
       width: 100%;
-      height: 150px;
+      height: 140px;
       background: #0b0f19;
       border: 1px solid #334155;
       color: #fff;
@@ -67,18 +67,40 @@
       font-size: 14px;
     }
     .list-box {
-      margin-top: 10px;
-      max-height: 200px;
+      margin-top: 12px;
+      max-height: 280px;
       overflow-y: auto;
       background: #0b0f19;
       border: 1px solid #1e293b;
       border-radius: 8px;
       padding: 10px;
-      font-size: 12px;
-      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
-    .item-valid { color: #4ade80; margin-bottom: 4px; }
-    .item-dead { color: #f87171; margin-bottom: 4px; }
+    .item-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: #151c2c;
+      border: 1px solid #1e293b;
+    }
+    .avatar-img {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #334155;
+      object-fit: cover;
+    }
+    .item-info {
+      display: flex;
+      flex-direction: column;
+      font-size: 12px;
+    }
+    .item-valid { color: #4ade80; font-weight: bold; }
+    .item-dead { color: #f87171; font-weight: bold; }
     .error { color: #f87171; text-align: center; font-weight: bold; }
   </style>
 </head>
@@ -112,11 +134,10 @@
         return;
       }
 
-      // Split input berdasarkan baris baru (newline)
       const cookiesArray = rawText.split('\n').map(c => c.trim()).filter(c => c.length > 0);
 
       summaryDiv.innerHTML = '<span style="color:#94a3b8;">Memeriksa ' + cookiesArray.length + ' cookie...</span>';
-      resultListDiv.style.display = 'block';
+      resultListDiv.style.display = 'flex';
       resultListDiv.innerHTML = '';
       dlBtn.style.display = 'none';
       validList = [];
@@ -138,10 +159,26 @@
             if (item.valid) {
               validCount++;
               validList.push(item);
-              resultListDiv.innerHTML += `<div class="item-valid">[VALID] ${item.username} (ID: ${item.userId})</div>`;
+              resultListDiv.innerHTML += `
+                <div class="item-card">
+                  <img src="${item.avatar}" class="avatar-img" alt="avatar" />
+                  <div class="item-info">
+                    <span class="item-valid">[VALID] ${item.username}</span>
+                    <span style="color:#94a3b8; font-size:11px;">User ID: ${item.userId}</span>
+                  </div>
+                </div>
+              `;
             } else {
               deadCount++;
-              resultListDiv.innerHTML += `<div class="item-dead">[DEAD] Cookie #${idx + 1}</div>`;
+              resultListDiv.innerHTML += `
+                <div class="item-card">
+                  <div class="avatar-img" style="display:flex; align-items:center; justify-content:center; color:#f87171; font-weight:bold;">✕</div>
+                  <div class="item-info">
+                    <span class="item-dead">[DEAD] Cookie #${idx + 1}</span>
+                    <span style="color:#64748b; font-size:11px;">Cookie tidak valid / kedaluwarsa</span>
+                  </div>
+                </div>
+              `;
             }
           });
 
@@ -161,7 +198,6 @@
     function downloadValidTxt() {
       if (validList.length === 0) return;
 
-      // Format teks: Username:UserID:Cookie
       let textContent = validList.map(item => `${item.username}:${item.userId}:${item.cookie}`).join('\n');
 
       const blob = new Blob([textContent], { type: 'text/plain' });
