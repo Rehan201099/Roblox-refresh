@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Roblox Checker Ringan</title>
+  <title>Roblox Account Inspector</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -57,6 +57,23 @@
       padding: 12px;
       line-height: 1.6;
     }
+    .link-group {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+    }
+    .link-btn {
+      flex: 1;
+      text-align: center;
+      padding: 8px;
+      background: #334155;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .link-btn:hover { background: #475569; }
     .badge-yes { color: #4ade80; font-weight: bold; }
     .badge-no { color: #f87171; font-weight: bold; }
     .error { color: #f87171; text-align: center; font-weight: bold; }
@@ -66,7 +83,7 @@
 
   <div class="card">
     <h2>Roblox Checker</h2>
-    <label for="cookieInput" style="font-size: 12px; color: #94a3b8;">Cookie (.ROBLOSECURITY):</label>
+    <label for="cookieInput" style="font-size: 12px; color: #94a3b8;">Masukkan Cookie (.ROBLOSECURITY):</label>
     <textarea id="cookieInput" placeholder="_|WARNING:-DO-NOT-SHARE-THIS..."></textarea>
     <button onclick="checkCookie()">Cek Akun</button>
 
@@ -85,7 +102,7 @@
       }
 
       resultDiv.className = '';
-      resultDiv.innerHTML = '<div style="text-align:center; color:#94a3b8;">Memeriksa...</div>';
+      resultDiv.innerHTML = '<div style="text-align:center; color:#94a3b8;">Memeriksa akun...</div>';
 
       try {
         const response = await fetch('/api/check', {
@@ -104,7 +121,14 @@
               Username: <strong>${u.name}</strong><br>
               Display Name: <strong>${u.displayName}</strong><br>
               User ID: <strong>${u.id}</strong><br>
-              Roblox Premium: ${u.isPremium ? '<span class="badge-yes">Ya</span>' : '<span class="badge-no">Tidak</span>'}
+              Robux: <strong style="color: #4ade80;">${u.robux}</strong><br>
+              Trade Info: <strong>${u.trade}</strong><br>
+              Premium: ${u.isPremium ? '<span class="badge-yes">Ya</span>' : '<span class="badge-no">Tidak</span>'}
+              
+              <div class="link-group">
+                <a href="https://www.roblox.com/users/${u.id}/profile" target="_blank" class="link-btn">🔗 Cek Avatar</a>
+                <a href="https://www.roblox.com/users/${u.id}/inventory" target="_blank" class="link-btn">📦 Cek Inventori</a>
+              </div>
             </div>
           `;
         } else {
